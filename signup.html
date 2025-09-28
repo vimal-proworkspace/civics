@@ -129,6 +129,16 @@
                 alertBox.classList.remove('show');
             }, 4000);
         });
+        document.querySelector('form').addEventListener('submit', function(e){
+            e.preventDefault();
+            const role = document.getElementById('user-role-signup').value;
+            alert("Account created! Redirecting...");
+            if(role === 'citizen'){
+                window.location.href = 'v1.html';
+            } else {
+                window.location.href = 'v2.html';
+            }
+        });
     </script>
 </body>
 </html>
