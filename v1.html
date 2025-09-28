@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Civic Portal — Public</title>
+  <style>
+    body{font-family:Arial, sans-serif;background:#f4f7fb;margin:0;color:#222;}
+    header{background:#2b6cb0;color:#fff;padding:16px;}
+    .container{max-width:800px;margin:20px auto;padding:0 16px;}
+    .card{background:#fff;padding:16px;margin-bottom:18px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.08);}
+    label{display:block;margin:8px 0 4px;font-size:14px;color:#555;}
+    input,select,textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;}
+    textarea{resize:vertical;min-height:100px;}
+    button{background:#2b6cb0;color:#fff;border:none;padding:10px 14px;margin-top:10px;border-radius:6px;cursor:pointer;}
+    .complaint{border-left:4px solid #ddd;padding:12px;margin-bottom:12px;background:#fafafa;border-radius:6px;}
+    .status{font-size:12px;background:#edf2ff;color:#2b6cb0;padding:3px 8px;border-radius:10px;margin-left:8px;}
+    img{max-width:120px;border-radius:6px;margin-top:6px;}
+  </style>
+</head>
+<body>
+<header><h2>Public Complaint Portal</h2></header>
+<div class="container">
+  <div class="card">
+    <h3>Report an Issue</h3>
+    <label>Category</label>
+    <select id="cat">
+      <option value="sanitation">Sanitation</option>
+      <option value="roads">Roads</option>
+      <option value="streetlight">Streetlight</option>
+      <option value="water">Water</option>
+      <option value="trees">Trees</option>
+      <option value="other">Other</option>
+    </select>
+    <label>Location</label>
+    <input id="loc" type="text" placeholder="e.g., MG Road"/>
+    <label>Description</label>
+    <textarea id="desc"></textarea>
+    <label>Photo (optional)</label>
+    <input id="photo" type="file" accept="image/*"/>
+    <button id="submitBtn">Submit Complaint</button>
+  </div>
+
+  <div class="card">
+    <h3>Recent Complaints</h3>
+    <div id="publicList"></div>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBA39nLboEO6tvkqwG7Z5rPjioDZGrvv24",
+    authDomain: "civics-f8073.firebaseapp.com",
+    projectId: "civics-f8073",
+    storageBucket: "civics-f8073.firebasestorage.app",
+    messagingSenderId: "883472536043",
+    appId: "1:883472536043:web:16ed5d8ebbee58599489ae",
+    measurementId: "G-6LREGGS57C"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const storage = firebase.storage();
+
+  const cat=document.getElementById('cat');
+  const loc=document.getElementById('loc');
+  const desc=document.getElementById('desc');
+  const photo=document.getElementById('photo');
+  const submitBtn=document.getElementById('submitBtn');
+  const publicList=document.getElementById('publicList');
+
+  submitBtn.onclick=async()=>{
+    if(!desc.value.trim()){alert("Description required");return;}
+    submitBtn.disabled=true;submitBtn.textContent="Submitting...";
+    try{
+      const ref=db.collection("complaints").doc();
+      let data={id:ref.id,category:cat.value,location:loc.value,description:desc.value,
+                status:"new",createdAt:firebase.firestore.FieldValue.serverTimestamp()};
+      if(photo.files[0]){
+        const snap=await storage.ref("complaint_images/"+ref.id).put(photo.files[0]);
+        data.photoURL=await snap.ref.getDownloadURL();
+      }
+      await ref.set(data);
+      alert("Complaint submitted! ID: "+ref.id);
+      desc.value=loc.value="";photo.value="";
+    }catch(e){alert(e.message);}
+    submitBtn.disabled=false;submitBtn.textContent="Submit Complaint";
+  };
+
+  db.collection("complaints").orderBy("createdAt","desc").onSnapshot(snap=>{
+    publicList.innerHTML="";
+    snap.forEach(doc=>{
+      const d=doc.data();
+      let div=document.createElement("div");
+      div.className="complaint";
+      div.innerHTML=`<strong>${d.category} — ${d.location}</strong>
+                     <span class="status">${d.status}</span>
+                     <p>${d.description}</p>`;
+      if(d.photoURL){div.innerHTML+=<img src="${d.photoURL}"/>;}
+      publicList.appendChild(div);
+    });
+  });
+</script>
+</body>
+</html>
