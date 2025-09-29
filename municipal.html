@@ -6,13 +6,107 @@
   <title>Official Dashboard</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <style>
+    .complaint-card {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .complaint-card:hover { background: #f9f9f9; }
+    .complaint-details {
+      margin-top: 10px;
+      padding: 10px;
+      background: #f4f4f4;
+      border-radius: 5px;
+    }
+    .filter-bar { margin-bottom: 15px; }
+    .filter-bar select { margin-right: 10px; }
+
+    /* Notification bell */
+    .notification-bell {
+      position: fixed;
+      top: 15px;
+      right: 20px;
+      cursor: pointer;
+      font-size: 24px;
+    }
+    .notification-badge {
+      position: absolute;
+      top: -5px;
+      right: -10px;
+      background: red;
+      color: white;
+      border-radius: 50%;
+      padding: 2px 6px;
+      font-size: 12px;
+    }
+    .notification-dropdown {
+      display: none;
+      position: fixed;
+      top: 50px;
+      right: 20px;
+      background: white;
+      border: 1px solid #ccc;
+      width: 300px;
+      max-height: 400px;
+      overflow-y: auto;
+      z-index: 100;
+      border-radius: 5px;
+      box-shadow: 0px 2px 8px rgba(0,0,0,0.2);
+    }
+    .notification-item {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+    }
+    .notification-item:last-child { border-bottom: none; }
+  </style>
 </head>
 <body>
   <h2>Municipal Official Dashboard</h2>
+
+  <!-- Notification Bell -->
+  <div class="notification-bell" id="notificationBell">
+    🔔<span class="notification-badge" id="notificationCount">0</span>
+  </div>
+  <div class="notification-dropdown" id="notificationDropdown"></div>
+
+  <div class="filter-bar">
+    <label>Category:</label>
+    <select id="filterCategory">
+      <option value="">All</option>
+      <option value="Road & Pavement Issues">Road & Pavement Issues</option>
+      <option value="Street Lighting Problems">Street Lighting Problems</option>
+      <option value="Waste & Garbage Management">Waste & Garbage Management</option>
+      <option value="Water Supply & Sewage">Water Supply & Sewage</option>
+      <option value="Traffic Signals & Signage">Traffic Signals & Signage</option>
+      <option value="Public Safety & Security">Public Safety & Security</option>
+      <option value="Parks & Public Spaces">Parks & Public Spaces</option>
+      <option value="Health & Sanitation">Health & Sanitation</option>
+      <option value="Other / Miscellaneous">Other / Miscellaneous</option>
+    </select>
+
+    <label>Priority:</label>
+    <select id="filterPriority">
+      <option value="">All</option>
+      <option value="High">High</option>
+      <option value="Normal">Normal</option>
+    </select>
+
+    <label>Status:</label>
+    <select id="filterStatus">
+      <option value="">All</option>
+      <option value="Pending Review">Pending Review</option>
+      <option value="In Progress">In Progress</option>
+      <option value="Resolved">Resolved</option>
+    </select>
+  </div>
+
   <div id="complaintsList"></div>
 
   <script>
-    // ✅ Firebase Config
     const firebaseConfig = {
       apiKey: "AIzaSyD3-7Y4Bo04dbKjVpaB91JcWzxR_5lAOHc",
       authDomain: "civics-f8073.firebaseapp.com",
@@ -24,40 +118,106 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // ✅ Listen to complaints collection in Firestore
-    db.collection("complaints").orderBy("createdAt", "desc").onSnapshot(snapshot => {
-      const list = document.getElementById("complaintsList");
-      list.innerHTML = "";
-      snapshot.forEach(doc => {
-        const d = doc.data();
-        const div = document.createElement("div");
+    let allComplaints = [];
+    let notifications = [];
+    const knownComplaintIds = new Set();
 
-        // Dropdown for status update
-        div.innerHTML = `
-          <p><strong>${d.title}</strong></p>
-          <p>${d.desc}</p>
-          ${d.photoURL ? `<img src="${d.photoURL}" width="150"/>` : ""}
-          <label>Status:</label>
-          <select onchange="updateStatus('${doc.id}', this.value)">
-            <option value="Pending Review" ${d.status === "Pending Review" ? "selected" : ""}>Pending Review</option>
-            <option value="In Progress" ${d.status === "In Progress" ? "selected" : ""}>In Progress</option>
-            <option value="Resolved" ${d.status === "Resolved" ? "selected" : ""}>Resolved</option>
-          </select>
-          ${d.createdAt ? `<br/><small>${d.createdAt.toDate()}</small>` : ""}
-          <hr/>
-        `;
-        list.appendChild(div);
-      });
+    const filterCategory = document.getElementById("filterCategory");
+    const filterPriority = document.getElementById("filterPriority");
+    const filterStatus = document.getElementById("filterStatus");
+
+    const notificationBell = document.getElementById("notificationBell");
+    const notificationCount = document.getElementById("notificationCount");
+    const notificationDropdown = document.getElementById("notificationDropdown");
+
+    function renderNotifications() {
+      notificationCount.innerText = notifications.length;
+      notificationDropdown.innerHTML = notifications.map(n => `<div class="notification-item">${n}</div>`).join('');
+    }
+
+    notificationBell.addEventListener("click", () => {
+      notificationDropdown.style.display = notificationDropdown.style.display === "block" ? "none" : "block";
     });
 
-    // ✅ Update status in Firestore
+    function renderComplaints() {
+      const list = document.getElementById("complaintsList");
+      list.innerHTML = "";
+
+      const filtered = allComplaints.filter(d => {
+        return (filterCategory.value === "" || d.category === filterCategory.value) &&
+               (filterPriority.value === "" || d.priority === filterPriority.value) &&
+               (filterStatus.value === "" || d.status === filterStatus.value);
+      });
+
+      filtered.forEach(doc => {
+        const div = document.createElement("div");
+        div.className = "complaint-card";
+
+        div.innerHTML = `
+          <p><strong>${doc.title}</strong> (${doc.status || "Pending Review"})</p>
+          <p>${doc.desc.substring(0,50)}...</p>
+          <div class="complaint-details" style="display:none;">
+            ${doc.category ? `<p>Category: ${doc.category}</p>` : ""}
+            ${doc.photoURL ? `<img src="${doc.photoURL}" width="150"/>` : ""}
+            ${doc.priority ? `<p>Priority: ${doc.priority}</p>` : ""}
+            ${doc.latitude && doc.longitude ? `<p>Location: ${doc.latitude.toFixed(4)}, ${doc.longitude.toFixed(4)}</p>` : ""}
+            ${doc.createdAt ? `<p>Created At: ${doc.createdAt.toDate()}</p>` : ""}
+            <label>Update Status:</label>
+            <select onchange="updateStatus('${doc.id}', this.value)">
+              <option value="Pending Review" ${doc.status === "Pending Review" ? "selected" : ""}>Pending Review</option>
+              <option value="In Progress" ${doc.status === "In Progress" ? "selected" : ""}>In Progress</option>
+              <option value="Resolved" ${doc.status === "Resolved" ? "selected" : ""}>Resolved</option>
+            </select>
+          </div>
+        `;
+
+        div.addEventListener("click", () => {
+          const details = div.querySelector(".complaint-details");
+          details.style.display = details.style.display === "none" ? "block" : "none";
+        });
+
+        list.appendChild(div);
+      });
+    }
+
+    db.collection("complaints").orderBy("createdAt", "desc").onSnapshot(snapshot => {
+      allComplaints = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Notifications instead of alerts
+      allComplaints.forEach(doc => {
+        if (!knownComplaintIds.has(doc.id)) {
+          knownComplaintIds.add(doc.id);
+          notifications.push(`New complaint: ${doc.title} (${doc.category || "No Category"})`);
+        }
+
+        // SLA alert: High priority pending more than 24 hours
+        if (doc.priority === "High" && doc.status !== "Resolved" && doc.createdAt) {
+          const createdTime = doc.createdAt.toDate();
+          const now = new Date();
+          const diffHours = (now - createdTime) / (1000*60*60);
+          if (diffHours > 24) {
+            notifications.push(`SLA Breach! Complaint "${doc.title}" pending >24 hrs`);
+          }
+        }
+      });
+
+      renderNotifications();
+      renderComplaints();
+    });
+
+    filterCategory.addEventListener("change", renderComplaints);
+    filterPriority.addEventListener("change", renderComplaints);
+    filterStatus.addEventListener("change", renderComplaints);
+
     async function updateStatus(id, newStatus) {
       try {
         await db.collection("complaints").doc(id).update({ status: newStatus });
-        alert(`Status updated to: ${newStatus}`);
+        notifications.push(`Status updated: Complaint ID ${id} → ${newStatus}`);
+        renderNotifications();
       } catch (error) {
         console.error("Error updating status: ", error);
-        alert("Failed to update status. Try again.");
+        notifications.push(`Failed to update status for Complaint ID ${id}`);
+        renderNotifications();
       }
     }
   </script>
