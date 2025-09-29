@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Official Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+  <h2>Municipal Official Dashboard</h2>
+  <div id="complaintsList"></div>
+
+  <script>
+    // ✅ Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyD3-7Y4Bo04dbKjVpaB91JcWzxR_5lAOHc",
+      authDomain: "civics-f8073.firebaseapp.com",
+      projectId: "civics-f8073",
+      storageBucket: "civics-f8073.appspot.com",
+      messagingSenderId: "5035645000",
+      appId: "1:5035645000:web:4ef79e5e5e5e5e5e"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // ✅ Listen to complaints collection in Firestore
+    db.collection("complaints").orderBy("createdAt", "desc").onSnapshot(snapshot => {
+      const list = document.getElementById("complaintsList");
+      list.innerHTML = "";
+      snapshot.forEach(doc => {
+        const d = doc.data();
+        const div = document.createElement("div");
+
+        // Dropdown for status update
+        div.innerHTML = `
+          <p><strong>${d.title}</strong></p>
+          <p>${d.desc}</p>
+          ${d.photoURL ? `<img src="${d.photoURL}" width="150"/>` : ""}
+          <label>Status:</label>
+          <select onchange="updateStatus('${doc.id}', this.value)">
+            <option value="Pending Review" ${d.status === "Pending Review" ? "selected" : ""}>Pending Review</option>
+            <option value="In Progress" ${d.status === "In Progress" ? "selected" : ""}>In Progress</option>
+            <option value="Resolved" ${d.status === "Resolved" ? "selected" : ""}>Resolved</option>
+          </select>
+          ${d.createdAt ? `<br/><small>${d.createdAt.toDate()}</small>` : ""}
+          <hr/>
+        `;
+        list.appendChild(div);
+      });
+    });
+
+    // ✅ Update status in Firestore
+    async function updateStatus(id, newStatus) {
+      try {
+        await db.collection("complaints").doc(id).update({ status: newStatus });
+        alert(`Status updated to: ${newStatus}`);
+      } catch (error) {
+        console.error("Error updating status: ", error);
+        alert("Failed to update status. Try again.");
+      }
+    }
+  </script>
+</body>
+</html>
