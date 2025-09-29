@@ -3,17 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Citizen Dashboard</title>
+  <title>Citizen Report Submission</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
 </head>
 <body>
-  <h2>Citizen Dashboard</h2>
+  <h2>Submit a Civic Issue</h2>
   <form id="reportForm">
     <input type="text" id="title" placeholder="Title" required /><br />
     <textarea id="desc" placeholder="Description" required></textarea><br />
     <input type="file" id="photo" accept="image/*" /><br />
+
+    <!-- Visible, readonly location input -->
+    <label>Location (auto-detected — cannot edit)</label>
+    <input type="text" id="location" readonly placeholder="Fetching location..." /><br />
+
     <button type="submit">Submit Report</button>
   </form>
 
@@ -25,7 +30,7 @@
       apiKey: "AIzaSyD3-7Y4Bo04dbKjVpaB91JcWzxR_5lAOHc",
       authDomain: "civics-f8073.firebaseapp.com",
       projectId: "civics-f8073",
-      storageBucket: "civics-f8073.appspot.com", // 🔧 double check this
+      storageBucket: "civics-f8073.appspot.com",
       messagingSenderId: "5035645000",
       appId: "1:5035645000:web:4ef79e5e5e5e5e5e"
     };
@@ -33,8 +38,38 @@
     const db = firebase.firestore();
     const storage = firebase.storage();
 
+    let latitude = null, longitude = null;
+
+    // Mandatory geolocation
+    function fetchLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            latitude = position.coords.latitude;
+            longitude = position.coords.longitude;
+            // Fill readonly location input
+            document.getElementById('location').value = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+          },
+          (error) => {
+            alert("Location access is required to submit a report. Redirecting back to dashboard.");
+            window.location.href = 'user.html';
+          }
+        );
+      } else {
+        alert("Geolocation is not supported by your browser. Redirecting back.");
+        window.location.href = 'user.html';
+      }
+    }
+
+    fetchLocation(); // trigger on load
+
     document.getElementById('reportForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (latitude === null || longitude === null) {
+        alert("Waiting for location. Please allow location access.");
+        return;
+      }
+
       const title = document.getElementById('title').value;
       const desc = document.getElementById('desc').value;
       const file = document.getElementById('photo').files[0];
@@ -50,6 +85,8 @@
         title,
         desc,
         photoURL,
+        latitude,
+        longitude,
         status: "Submitted",
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -68,6 +105,7 @@
           <p><strong>${d.title}</strong></p>
           <p>${d.desc}</p>
           ${d.photoURL ? `<img src="${d.photoURL}" width="150"/>` : ""}
+          ${d.latitude && d.longitude ? `<p>Location: ${d.latitude.toFixed(4)}, ${d.longitude.toFixed(4)}</p>` : ""}
           <p>Status: ${d.status}</p>
           ${d.createdAt ? `<small>${d.createdAt.toDate()}</small>` : ""}
           <hr/>
