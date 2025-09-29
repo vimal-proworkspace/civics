@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>User Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    .header { display: flex; justify-content: space-between; align-items: center; }
+
+    .bell { position: relative; cursor: pointer; font-size: 24px; }
+    .bell::after {
+      content: attr(data-count);
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: red;
+      color: white;
+      font-size: 12px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #notificationPanel {
+      display: none;
+      position: absolute;
+      top: 35px;
+      right: 0;
+      border: 1px solid #ccc;
+      background: white;
+      width: 300px;
+      max-height: 300px;
+      overflow-y: auto;
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      z-index: 100;
+    }
+
+    .counts { display: flex; margin-top: 20px; gap: 15px; }
+    .count-card { flex: 1; padding: 15px; border: 1px solid #ccc; border-radius: 5px; text-align: center; }
+    #graphContainer { margin-top: 30px; max-width: 500px; }
+    button { padding: 10px 20px; margin-top: 15px; cursor: pointer; }
+    .notif-item { border-bottom: 1px solid #eee; padding: 5px 0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h2>User Dashboard</h2>
+    <div style="position: relative;">
+      <div class="bell" id="notificationBell" data-count="0">🔔</div>
+      <div id="notificationPanel"></div>
+    </div>
+  </div>
+
+  <button onclick="goToReport()">Submit New Complaint</button>
+
+  <div class="counts">
+    <div class="count-card">Resolved: <span id="resolvedCount">0</span></div>
+    <div class="count-card">In Progress: <span id="inProgressCount">0</span></div>
+    <div class="count-card">Pending Review: <span id="pendingCount">0</span></div>
+  </div>
+
+  <div id="graphContainer">
+    <canvas id="complaintChart"></canvas>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyD3-7Y4Bo04dbKjVpaB91JcWzxR_5lAOHc",
+      authDomain: "civics-f8073.firebaseapp.com",
+      projectId: "civics-f8073",
+      storageBucket: "civics-f8073.appspot.com",
+      messagingSenderId: "5035645000",
+      appId: "1:5035645000:web:4ef79e5e5e5e5e5e"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    function goToReport() {
+      window.location.href = "user.html"; 
+    }
+
+    const resolvedEl = document.getElementById("resolvedCount");
+    const inProgressEl = document.getElementById("inProgressCount");
+    const pendingEl = document.getElementById("pendingCount");
+    const bell = document.getElementById("notificationBell");
+    const panel = document.getElementById("notificationPanel");
+
+    let resolved=0, inProgress=0, pending=0;
+    let notifications = [];
+
+    // toggle notification panel
+    bell.addEventListener('click', () => {
+      panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+    });
+
+    db.collection("complaints").orderBy("createdAt", "desc").onSnapshot(snapshot => {
+      resolved=0; inProgress=0; pending=0;
+      notifications = [];
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        if(data.status === "Resolved") {
+          resolved++;
+          notifications.push(`Your complaint "${data.title}" has been resolved.`);
+        } else if(data.status === "In Progress") inProgress++;
+        else if(data.status === "Pending Review") pending++;
+
+        // SLA: 3 days threshold for unresolved complaints
+        if(data.status !== "Resolved" && data.createdAt) {
+          const createdTime = data.createdAt.toDate();
+          const now = new Date();
+          const diffHours = (now - createdTime) / (1000*60*60);
+          if(diffHours > 72) {
+            notifications.push(`Your complaint "${data.title}" is pending for over 3 days.`);
+          }
+        }
+      });
+
+      resolvedEl.textContent = resolved;
+      inProgressEl.textContent = inProgress;
+      pendingEl.textContent = pending;
+
+      bell.setAttribute("data-count", notifications.length);
+
+      renderChart(resolved, inProgress, pending);
+      renderNotifications();
+    });
+
+    function renderChart(resolved, inProgress, pending) {
+      const ctx = document.getElementById('complaintChart').getContext('2d');
+      if(window.myChart) window.myChart.destroy();
+
+      window.myChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Resolved', 'In Progress', 'Pending Review'],
+          datasets: [{
+            data: [resolved, inProgress, pending],
+            backgroundColor: ['#4caf50','#ff9800','#f44336']
+          }]
+        },
+        options: { responsive: true }
+      });
+    }
+
+    function renderNotifications() {
+      panel.innerHTML = "";
+      if(notifications.length === 0) {
+        panel.innerHTML = "<p>No new notifications.</p>";
+      } else {
+        notifications.forEach(msg => {
+          const div = document.createElement("div");
+          div.className = "notif-item";
+          div.textContent = msg;
+          panel.appendChild(div);
+        });
+      }
+    }
+  </script>
+</body>
+</html>
