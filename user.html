@@ -15,6 +15,21 @@
     <textarea id="desc" placeholder="Description" required></textarea><br />
     <input type="file" id="photo" accept="image/*" /><br />
 
+    <!-- Category dropdown -->
+    <label>Category</label>
+    <select id="category">
+      <option value="">Select a category</option>
+      <option value="Road & Pavement Issues">Road & Pavement Issues</option>
+      <option value="Street Lighting Problems">Street Lighting Problems</option>
+      <option value="Waste & Garbage Management">Waste & Garbage Management</option>
+      <option value="Water Supply & Sewage">Water Supply & Sewage</option>
+      <option value="Traffic Signals & Signage">Traffic Signals & Signage</option>
+      <option value="Public Safety & Security">Public Safety & Security</option>
+      <option value="Parks & Public Spaces">Parks & Public Spaces</option>
+      <option value="Health & Sanitation">Health & Sanitation</option>
+      <option value="Other / Miscellaneous">Other / Miscellaneous</option>
+    </select><br />
+
     <!-- Visible, readonly location input -->
     <label>Location (auto-detected — cannot edit)</label>
     <input type="text" id="location" readonly placeholder="Fetching location..." /><br />
@@ -47,7 +62,6 @@
           (position) => {
             latitude = position.coords.latitude;
             longitude = position.coords.longitude;
-            // Fill readonly location input
             document.getElementById('location').value = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
           },
           (error) => {
@@ -60,8 +74,44 @@
         window.location.href = 'user.html';
       }
     }
-
     fetchLocation(); // trigger on load
+
+    // NLP keyword mapping
+    const keywordMap = {
+      "Road & Pavement Issues": ["pothole","road","street","sidewalk"],
+      "Street Lighting Problems": ["streetlight","lamp","light","bulb"],
+      "Waste & Garbage Management": ["garbage","trash","bin","litter","dumping"],
+      "Water Supply & Sewage": ["water","sewage","pipeline","leakage"],
+      "Traffic Signals & Signage": ["traffic","signal","sign","stop","crosswalk"],
+      "Public Safety & Security": ["crime","theft","security","police"],
+      "Parks & Public Spaces": ["park","garden","playground","open space"],
+      "Health & Sanitation": ["health","sanitation","hospital","clinic"],
+      "Other / Miscellaneous": []
+    };
+
+    function recommendCategory(desc) {
+  const text = desc.toLowerCase();
+  let bestCategory = "Other / Miscellaneous";
+  let maxScore = 0;
+
+  for (const [category, keywords] of Object.entries(keywordMap)) {
+    let score = 0;
+    for (const kw of keywords) {
+      if (text.includes(kw)) score++;
+    }
+    if (score > maxScore) {
+      maxScore = score;
+      bestCategory = category;
+    }
+  }
+  return bestCategory;
+}
+
+
+    function assignPriority(category) {
+      const highPriority = ["Road & Pavement Issues", "Water Supply & Sewage", "Public Safety & Security"];
+      return highPriority.includes(category) ? "High" : "Normal";
+    }
 
     document.getElementById('reportForm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -72,8 +122,24 @@
 
       const title = document.getElementById('title').value;
       const desc = document.getElementById('desc').value;
+      const selectedCategory = document.getElementById('category').value;
+      const recommendedCategory = recommendCategory(desc);
+      const priority = assignPriority(recommendedCategory);
       const file = document.getElementById('photo').files[0];
       let photoURL = "";
+
+      if (selectedCategory === "") {
+        alert("Please select a category.");
+        return;
+      }
+
+      // Show warning if selected category differs
+      if (selectedCategory !== recommendedCategory) {
+        const confirmChange = confirm(`Based on your description, this issue better fits the category: "${recommendedCategory}". Do you want to continue with your selected category "${selectedCategory}"?`);
+        if (!confirmChange) {
+          return; // allow user to change category
+        }
+      }
 
       if (file) {
         const ref = storage.ref('complaints/' + Date.now() + '-' + file.name);
@@ -85,6 +151,8 @@
         title,
         desc,
         photoURL,
+        category: selectedCategory,
+        priority,
         latitude,
         longitude,
         status: "Submitted",
@@ -105,6 +173,8 @@
           <p><strong>${d.title}</strong></p>
           <p>${d.desc}</p>
           ${d.photoURL ? `<img src="${d.photoURL}" width="150"/>` : ""}
+          ${d.category ? `<p>Category: ${d.category}</p>` : ""}
+          ${d.priority ? `<p>Priority: ${d.priority}</p>` : ""}
           ${d.latitude && d.longitude ? `<p>Location: ${d.latitude.toFixed(4)}, ${d.longitude.toFixed(4)}</p>` : ""}
           <p>Status: ${d.status}</p>
           ${d.createdAt ? `<small>${d.createdAt.toDate()}</small>` : ""}
