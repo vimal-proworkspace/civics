@@ -13,7 +13,9 @@
   <form id="reportForm">
     <input type="text" id="title" placeholder="Title" required /><br />
     <textarea id="desc" placeholder="Description" required></textarea><br />
-    <input type="file" id="photo" accept="image/*" /><br />
+
+    <!-- Camera capture instead of file upload -->
+    <input type="file" id="photo" accept="image/*" capture="environment" required/><br />
 
     <!-- Category dropdown -->
     <label>Category</label>
@@ -90,23 +92,22 @@
     };
 
     function recommendCategory(desc) {
-  const text = desc.toLowerCase();
-  let bestCategory = "Other / Miscellaneous";
-  let maxScore = 0;
+      const text = desc.toLowerCase();
+      let bestCategory = "Other / Miscellaneous";
+      let maxScore = 0;
 
-  for (const [category, keywords] of Object.entries(keywordMap)) {
-    let score = 0;
-    for (const kw of keywords) {
-      if (text.includes(kw)) score++;
+      for (const [category, keywords] of Object.entries(keywordMap)) {
+        let score = 0;
+        for (const kw of keywords) {
+          if (text.includes(kw)) score++;
+        }
+        if (score > maxScore) {
+          maxScore = score;
+          bestCategory = category;
+        }
+      }
+      return bestCategory;
     }
-    if (score > maxScore) {
-      maxScore = score;
-      bestCategory = category;
-    }
-  }
-  return bestCategory;
-}
-
 
     function assignPriority(category) {
       const highPriority = ["Road & Pavement Issues", "Water Supply & Sewage", "Public Safety & Security"];
