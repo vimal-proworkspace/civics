@@ -1,103 +1,102 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pulse Point | Sign In</title>
-    <link rel="stylesheet" href="auth.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pulse Point | Sign In</title>
+  <link rel="stylesheet" href="auth.css">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="background-animation"></div>
+  <div class="background-animation"></div>
 
-    <div class="main-card">
-        <div class="form-section">
-            <div class="logo">
-                <svg width="24" height="24" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="10" y="10" width="30" height="30" rx="5" fill="#2c7a7b"/>
-                    <rect x="40" y="10" width="20" height="20" rx="3" fill="#38b2ac"/>
-                    <rect x="70" y="10" width="20" height="20" rx="3" fill="#4fd1c5"/>
-                    <rect x="10" y="50" width="20" height="20" rx="3" fill="#2c7a7b"/>
-                    <rect x="40" y="40" width="30" height="30" rx="5" fill="#38b2ac"/>
-                    <path d="M75 35L85 45L75 55" stroke="#4fd1c5" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M35 70L45 80L35 90" stroke="#4fd1c5" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-                <span>Pulse Point</span>
-            </div>
-            
-            <h3>Sign In</h3>
-            <p class="subtitle">Welcome back! Please login to your account.</p>
-            
-            <form id="loginForm">
-                <div class="input-group">
-                    <label for="user-role">I am a:</label>
-                    <select id="user-role">
-                        <option value="citizen">Citizen Reporter</option>
-                        <option value="official">Municipal Official</option>
-                    </select>
-                </div>
+  <div class="main-card">
+    <div class="form-section">
+      <div class="logo">
+        <svg width="24" height="24" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect x="10" y="10" width="30" height="30" rx="5" fill="#2c7a7b"/>
+          <rect x="40" y="10" width="20" height="20" rx="3" fill="#38b2ac"/>
+          <rect x="70" y="10" width="20" height="20" rx="3" fill="#4fd1c5"/>
+          <rect x="10" y="50" width="20" height="20" rx="3" fill="#2c7a7b"/>
+          <rect x="40" y="40" width="30" height="30" rx="5" fill="#38b2ac"/>
+          <path d="M75 35L85 45L75 55" stroke="#4fd1c5" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M35 70L45 80L35 90" stroke="#4fd1c5" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Pulse Point</span>
+      </div>
 
-                <div class="input-group">
-                    <input type="email" placeholder="Email Address" required>
-                </div>
-                <div class="input-group">
-                    <input type="password" placeholder="Password" required>
-                </div>
-                
-                <div class="input-group" id="official-code-group" style="display: none;">
-                    <input type="text" id="official-code" placeholder="Staff Verification Code">
-                </div>
+      <h3>Sign In</h3>
+      <p class="subtitle">Welcome back! Please login to your account.</p>
 
-                <button type="submit" id="main-auth-btn">Citizen Sign In</button>
-            </form>
-
-            <div class="divider"><span>OR</span></div>
-            
-            <button class="social-btn google-btn">
-                Continue with Google
-            </button>
-            
-            <div class="links">
-                <a href="#">Forgot Password?</a>
-                <p>Don't have an account? <a href="signup.html">Sign Up</a></p>
-            </div>
+      <form id="loginForm">
+        <div class="input-group">
+          <label for="user-role">I am a:</label>
+          <select id="user-role">
+            <option value="citizen">Citizen Reporter</option>
+            <option value="official">Municipal Official</option>
+          </select>
         </div>
-        <div class="illustration-section">
-            <div class="illustration-content">
-                <div class="lightbulb"></div>
-                <div class="person-outline">
-                    <div class="head"></div>
-                    <div class="body"></div>
-                    <div class="laptop"></div>
-                    <div class="wave"></div>
-                </div>
-            </div>
+
+        <div class="input-group">
+          <input type="email" placeholder="Email Address" required>
         </div>
+        <div class="input-group">
+          <input type="password" placeholder="Password" required>
+        </div>
+
+        <div class="input-group" id="official-code-group" style="display:none;">
+          <input type="text" id="official-code" placeholder="Staff Verification Code">
+        </div>
+
+        <button type="submit" id="main-auth-btn">Citizen Sign In</button>
+      </form>
+
+      <div class="divider"><span>OR</span></div>
+      <button class="social-btn google-btn">Continue with Google</button>
+
+      <div class="links">
+        <a href="#">Forgot Password?</a>
+        <p>Don't have an account? <a href="signup.html">Sign Up</a></p>
+      </div>
     </div>
-    <div class="custom-alert" id="customAlert"></div>
 
-    <script>
-        // Show/hide Staff Code input & update button text
-        const userRoleSelect = document.getElementById('user-role');
-        const officialCodeGroup = document.getElementById('official-code-group');
-        const authButton = document.getElementById('main-auth-btn');
+    <div class="illustration-section">
+      <div class="illustration-content">
+        <div class="lightbulb"></div>
+        <div class="person-outline">
+          <div class="head"></div>
+          <div class="body"></div>
+          <div class="laptop"></div>
+          <div class="wave"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-        userRoleSelect.addEventListener('change', function() {
-            const isOfficial = this.value === 'official';
-            officialCodeGroup.style.display = isOfficial ? 'block' : 'none';
-            authButton.textContent = isOfficial ? 'Official Sign In' : 'Citizen Sign In';
-        });
+  <div class="custom-alert" id="customAlert"></div>
 
-        // Redirect based on role on login submit
-        document.getElementById('loginForm').addEventListener('submit', function(e){
-            e.preventDefault(); // prevent actual form submission
-            const role = userRoleSelect.value;
-            if(role === 'citizen'){
-                window.location.href = 'v1.html'; // citizen dashboard
-            } else if(role === 'official'){
-                window.location.href = 'v2.html'; // municipal dashboard
-            }
-        });
-    </script>
+  <script>
+    const userRoleSelect = document.getElementById('user-role');
+    const officialCodeGroup = document.getElementById('official-code-group');
+    const authButton = document.getElementById('main-auth-btn');
+
+    // Toggle staff verification field based on role
+    userRoleSelect.addEventListener('change', function() {
+      const isOfficial = this.value === 'official';
+      officialCodeGroup.style.display = isOfficial ? 'block' : 'none';
+      authButton.textContent = isOfficial ? 'Official Sign In' : 'Citizen Sign In';
+    });
+
+    // Redirect to appropriate dashboard
+    document.getElementById('loginForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const role = userRoleSelect.value;
+      if (role === 'citizen') {
+        window.location.href = 'udash.html'; // User Dashboard
+      } else {
+        window.location.href = 'municipal.html'; // Official Dashboard
+      }
+    });
+  </script>
 </body>
 </html>
