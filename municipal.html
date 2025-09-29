@@ -13,7 +13,7 @@
       margin-bottom: 10px;
       border-radius: 5px;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: background 0.2s, border 0.2s;
     }
     .complaint-card:hover { background: #f9f9f9; }
     .complaint-details {
@@ -21,6 +21,10 @@
       padding: 10px;
       background: #f4f4f4;
       border-radius: 5px;
+    }
+    .sla-breach {
+      border: 2px solid red;
+      background-color: #ffe6e6;
     }
     .filter-bar { margin-bottom: 15px; }
     .filter-bar select { margin-right: 10px; }
@@ -153,6 +157,18 @@
         const div = document.createElement("div");
         div.className = "complaint-card";
 
+        // SLA Breach check
+        let isSlaBreach = false;
+        if (doc.priority === "High" && doc.status !== "Resolved" && doc.createdAt) {
+          const createdTime = doc.createdAt.toDate();
+          const now = new Date();
+          const diffHours = (now - createdTime) / (1000*60*60);
+          if (diffHours > 24) {
+            isSlaBreach = true;
+          }
+        }
+        if (isSlaBreach) div.classList.add("sla-breach");
+
         div.innerHTML = `
           <p><strong>${doc.title}</strong> (${doc.status || "Pending Review"})</p>
           <p>${doc.desc.substring(0,50)}...</p>
@@ -163,7 +179,7 @@
             ${doc.latitude && doc.longitude ? `<p>Location: ${doc.latitude.toFixed(4)}, ${doc.longitude.toFixed(4)}</p>` : ""}
             ${doc.createdAt ? `<p>Created At: ${doc.createdAt.toDate()}</p>` : ""}
             <label>Update Status:</label>
-            <select onchange="updateStatus('${doc.id}', this.value)">
+            <select class="status-select" onchange="updateStatus('${doc.id}', this.value)">
               <option value="Pending Review" ${doc.status === "Pending Review" ? "selected" : ""}>Pending Review</option>
               <option value="In Progress" ${doc.status === "In Progress" ? "selected" : ""}>In Progress</option>
               <option value="Resolved" ${doc.status === "Resolved" ? "selected" : ""}>Resolved</option>
@@ -171,9 +187,15 @@
           </div>
         `;
 
+        // Toggle details on card click
         div.addEventListener("click", () => {
           const details = div.querySelector(".complaint-details");
           details.style.display = details.style.display === "none" ? "block" : "none";
+        });
+
+        // Prevent dropdown click from toggling the card
+        div.querySelectorAll("select").forEach(el => {
+          el.addEventListener("click", e => e.stopPropagation());
         });
 
         list.appendChild(div);
