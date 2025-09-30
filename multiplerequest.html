@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bulk Order Request Content</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <style>
+        /*
+         * CSS STYLES FOR THE MIDDLE SECTION (BULK REQUEST)
+         */
+        
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f7f7f7; 
+        }
+
+        /* Adjustments for the main content area (simulating space from ignored bars) */
+        .main-content {
+            flex-grow: 1;
+            padding: 20px 40px;
+            margin-left: 200px; /* Space for the left sidebar */
+            padding-top: 80px; /* Space for the top navigation bar */
+            min-height: 100vh;
+        }
+
+        /* --- Page Content Container --- */
+        .bulk-request-content {
+            padding: 30px 0; 
+        }
+
+        .page-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 30px;
+            color: #333;
+        }
+
+        /* --- Bulk Request Form Card --- */
+        .request-card {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); 
+        }
+        
+        /* Buyer Name Input Area Style */
+        .buyer-info-group {
+            font-size: 1.1rem;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px dashed #ddd;
+            color: #333;
+        }
+        
+        .buyer-info-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        /* Input style specific to the buyer name */
+        #buyer-name-input {
+            width: 50%; /* Make it moderately wide */
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+
+        /* --- Product Rows Container --- */
+        #product-rows-container {
+            margin-bottom: 20px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .product-row {
+            display: flex;
+            gap: 20px;
+            align-items: flex-end; 
+            margin-bottom: 15px;
+            padding: 15px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .product-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .form-group {
+            flex: 1;
+            min-width: 150px;
+        }
+        
+        /* Product Name input will take 2/3rds of the space */
+        .form-group.product-name { 
+            flex: 3; 
+        }
+        
+        /* Quantity and Date will share the remaining space */
+        .form-group.quantity {
+            flex: 1;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: #555;
+            font-size: 0.9rem;
+        }
+        
+        /* Style for all input/select elements */
+        .product-row input[type="number"],
+        .product-row input[type="date"],
+        .product-row input[type="text"], /* Added text input here */
+        .product-row select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box; 
+            font-size: 1rem;
+            background-color: #fff;
+        }
+
+        /* --- Action Buttons (Add/Remove) --- */
+        .remove-row-btn, .add-row-btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            white-space: nowrap; 
+        }
+        
+        .remove-row-btn {
+            background-color: #dc3545; 
+            color: white;
+            align-self: flex-start; 
+            margin-top: 25px; 
+        }
+
+        .remove-row-btn:hover {
+            background-color: #c82333;
+        }
+        
+        .add-row-btn {
+            background-color: #28a745; 
+            color: white;
+            display: block; 
+            width: 100%;
+        }
+
+        .add-row-btn:hover {
+            background-color: #1e7e34;
+        }
+
+        /* --- Delivery Date & Submit --- */
+        .delivery-and-submit {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        
+        .delivery-date-group {
+            flex: 1;
+            max-width: 300px;
+        }
+
+        .submit-btn {
+            padding: 12px 30px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .submit-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-content">
+
+        <main class="bulk-request-content">
+            <h1 class="page-title">Bulk Order Request</h1>
+            
+            <div class="request-card">
+                
+                <div class="buyer-info-group">
+                    <label for="buyer-name-input">Your Company/Buyer Name:</label>
+                    <input type="text" id="buyer-name-input" name="buyer-name" placeholder="Enter your name or company name" required>
+                </div>
+                
+                <form id="bulk-request-form">
+                    
+                    <div id="product-rows-container">
+                        <div class="product-row" data-id="1">
+                            
+                            <div class="form-group product-name">
+                                <label for="product-1">Product Name (e.g., Organic Roma Tomatoes)</label>
+                                <input type="text" id="product-1" name="product-1" placeholder="Enter product name" required>
+                            </div>
+                            
+                            <div class="form-group quantity">
+                                <label for="quantity-1">Quantity (in kg/ton)</label>
+                                <input type="number" id="quantity-1" name="quantity-1" placeholder="e.g., 500" min="1" required>
+                            </div>
+                            <button type="button" class="remove-row-btn" onclick="removeProductRow(this)">Remove</button>
+                        </div>
+                    </div>
+
+                    <button type="button" id="add-product-btn" class="add-row-btn">
+                        + Add Another Product
+                    </button>
+                    
+                    <div class="delivery-and-submit">
+                        <div class="form-group delivery-date-group">
+                            <label for="delivery-date">Target Delivery Date</label>
+                            <input type="date" id="delivery-date" name="delivery-date" required>
+                        </div>
+                        
+                        <button type="submit" class="submit-btn">
+                            Submit Bulk Request
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- FIREBASE CONFIGURATION & INITIALIZATION ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyDyLjGnZnHb1ZO0WUBSoj6q8clkuXP6-gY",
+            authDomain: "agrimart-01.firebaseapp.com",
+            databaseURL: "https://agrimart-01-default-rtdb.firebaseio.com/",
+            projectId: "agrimart-01",
+            storageBucket: "agrimart-01.appspot.com",
+            messagingSenderId: "101739256198",
+            appId: "1:101739256198:web:f6271b48dd399fb943b407"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        // ------------------------------------------------
+
+        let rowCount = 2; 
+
+        // Function to create a new product row (UPDATED for text input)
+        function createProductRow() {
+            const newRow = document.createElement('div');
+            newRow.classList.add('product-row');
+            newRow.setAttribute('data-id', rowCount);
+            
+            newRow.innerHTML = `
+                <div class="form-group product-name">
+                    <label for="product-${rowCount}">Product Name (e.g., Organic Roma Tomatoes)</label>
+                    <input type="text" id="product-${rowCount}" name="product-${rowCount}" placeholder="Enter product name" required>
+                </div>
+                <div class="form-group quantity">
+                    <label for="quantity-${rowCount}">Quantity (in kg/ton)</label>
+                    <input type="number" id="quantity-${rowCount}" name="quantity-${rowCount}" placeholder="e.g., 500" min="1" required>
+                </div>
+                <button type="button" class="remove-row-btn" onclick="removeProductRow(this)">Remove</button>
+            `;
+            
+            rowCount++; 
+            return newRow;
+        }
+
+        function removeProductRow(buttonElement) {
+            const rowToRemove = buttonElement.closest('.product-row');
+            const container = document.getElementById('product-rows-container');
+
+            if (container.children.length > 1) {
+                rowToRemove.remove();
+            } else {
+                alert("You must request at least one product.");
+            }
+        }
+        
+        // Function: Collects and formats data from the dynamic form
+        function collectFormData(form) {
+            
+            // Get buyer name from the input field
+            const buyerName = document.getElementById('buyer-name-input').value.trim();
+
+            const requestData = {
+                buyer: buyerName || "Anonymous Buyer", 
+                deliveryDate: document.getElementById('delivery-date').value,
+                submissionTimestamp: new Date().toISOString(),
+                status: "Pending", 
+                products: []
+            };
+
+            // Iterate over all products to collect item details
+            const productRows = document.querySelectorAll('.product-row');
+            productRows.forEach((row, index) => {
+                const rowId = index + 1;
+                // Get the values using the explicit IDs
+                const product = row.querySelector(`#product-${rowId}`).value; // Text input value
+                const quantity = row.querySelector(`#quantity-${rowId}`).value;
+
+                if (product && quantity) {
+                    requestData.products.push({
+                        product: product,
+                        quantity: parseFloat(quantity)
+                    });
+                }
+            });
+
+            return requestData;
+        }
+
+        // Function: Sends data to Firebase
+        function sendToFirebase(data) {
+            const bulkRequestsRef = database.ref('bulk_requests');
+            
+            return bulkRequestsRef.push(data)
+                .then(() => {
+                    return true;
+                })
+                .catch((error) => {
+                    console.error("Error writing to Firebase:", error);
+                    return false;
+                });
+        }
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const container = document.getElementById('product-rows-container');
+            const addButton = document.getElementById('add-product-btn');
+            const form = document.getElementById('bulk-request-form');
+            
+            // Ensure the initial row has the remove button functionality
+            const initialRemoveButton = container.querySelector('.product-row button');
+            if(initialRemoveButton) {
+                 initialRemoveButton.onclick = function() { removeProductRow(this); };
+            }
+
+            addButton.addEventListener('click', () => {
+                container.appendChild(createProductRow());
+            });
+
+            // Form Submission Handler
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                const requestData = collectFormData(form);
+                
+                // Input validation check (for required fields)
+                if (!document.getElementById('buyer-name-input').value.trim()) {
+                    alert("Please enter your name or company name.");
+                    return;
+                }
+                if (requestData.products.length === 0) {
+                     alert("Please add at least one product to your request.");
+                     return;
+                }
+
+                const submitBtn = document.querySelector('.submit-btn');
+                submitBtn.textContent = 'Submitting...';
+                submitBtn.disabled = true;
+
+                const success = await sendToFirebase(requestData);
+
+                if (success) {
+                    alert("Your bulk request has been submitted successfully and saved to Firebase!");
+                    // Optional: form.reset(); 
+                } else {
+                    alert("Submission failed. Please check the console for errors.");
+                }
+
+                // Restore button state
+                submitBtn.textContent = 'Submit Bulk Request';
+                submitBtn.disabled = false;
+            });
+        });
+    </script>
+</body>
+</html>

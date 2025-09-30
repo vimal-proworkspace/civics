@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Bulk Order Requests - Farmer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f7f7f7;
+        }
+
+        .main-content {
+            padding: 40px 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .page-title {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .request-card {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+            border-left: 5px solid #007bff; /* Visual cue for new requests */
+        }
+        
+        /* Highlight Pending requests */
+        .request-card.pending {
+            border-left-color: #ffc107; /* Yellow border for pending */
+        }
+        
+        .request-card.accepted {
+             border-left-color: #28a745; /* Green border for accepted */
+        }
+
+
+        .request-card h3 {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #007bff;
+            margin-bottom: 5px;
+        }
+
+        .request-details {
+            margin: 10px 0 15px;
+            font-size: 0.95rem;
+            color: #555;
+            padding-bottom: 10px;
+            border-bottom: 1px dashed #eee;
+        }
+        
+        .product-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0 20px;
+            border-top: 1px dashed #eee;
+            padding-top: 15px;
+        }
+        
+        .product-list li {
+            padding: 5px 0;
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .product-list li strong {
+            color: #444;
+            display: inline-block;
+            width: 150px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .action-buttons button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .accept-btn {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .accept-btn:hover {
+            background-color: #1e7e34;
+        }
+
+        .ignore-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .ignore-btn:hover {
+            background-color: #c82333;
+        }
+        
+        .no-requests {
+            text-align: center;
+            font-style: italic;
+            color: #777;
+            padding: 30px;
+        }
+        
+        .date-badge {
+            display: inline-block;
+            background-color: #f0f0f0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: normal;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-content">
+        <h1 class="page-title">Bulk Order Requests</h1>
+        <div id="requests-container">
+            <p class="no-requests">Loading requests...</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+        import { getDatabase, ref, onValue, update, query, orderByChild, equalTo } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-database.js";
+
+        // Firebase config (Same as provided)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDyLjGnZnHb1ZO0WUBSoj6q8clkuXP6-gY",
+            authDomain: "agrimart-01.firebaseapp.com",
+            databaseURL: "https://agrimart-01-default-rtdb.firebaseio.com/",
+            projectId: "agrimart-01",
+            storageBucket: "agrimart-01.appspot.com",
+            messagingSenderId: "101739256198",
+            appId: "1:101739256198:web:f6271b48dd399fb943b407"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const requestsContainer = document.getElementById("requests-container");
+
+        /**
+         * Converts the products array into an HTML list for display.
+         * @param {Array} products 
+         * @returns {string} HTML list string
+         */
+        function getProductsHtml(products) {
+            if (!Array.isArray(products) || products.length === 0) {
+                return '<p>No specific products listed.</p>';
+            }
+            const listItems = products.map(item => 
+                `<li><strong>${item.product}:</strong> ${item.quantity} kg/ton</li>`
+            ).join('');
+            
+            return `<ul class="product-list">${listItems}</ul>`;
+        }
+
+        // Function to render a single request card
+        function renderRequest(id, data) {
+            const status = data.status || "Pending";
+            
+            const card = document.createElement("div");
+            card.className = `request-card ${status.toLowerCase()}`;
+            card.setAttribute('data-request-id', id);
+
+            card.innerHTML = `
+                <h3>${data.buyer || "Unknown Buyer"}
+                    <span class="date-badge">Delivery: ${data.deliveryDate || "N/A"}</span>
+                </h3>
+                <div class="request-details">
+                    Status: <strong>${status}</strong><br>
+                    Request Date: ${new Date(data.submissionTimestamp).toLocaleDateString()}
+                </div>
+                
+                <h4>Requested Items:</h4>
+                ${getProductsHtml(data.products)}
+                
+                <div class="action-buttons">
+                    <button class="accept-btn" data-id="${id}" ${status !== 'Pending' ? 'disabled' : ''}>Accept</button>
+                    <button class="ignore-btn" data-id="${id}" ${status !== 'Pending' ? 'disabled' : ''}>Ignore</button>
+                </div>
+            `;
+            
+            // Note: Since we are filtering for "Pending" requests, the status check in the button is mainly for visual safety.
+            
+            return card;
+        }
+
+        // Fetch and listen for data from Firebase
+        // IMPORTANT: We filter to only show "Pending" requests, as that's what requires the farmer's action.
+        const pendingRequestsQuery = query(
+            ref(db, "bulk_requests"), 
+            orderByChild("status"), 
+            equalTo("Pending")
+        );
+
+        onValue(pendingRequestsQuery, (snapshot) => {
+            requestsContainer.innerHTML = ""; // Clear existing requests
+            
+            if (snapshot.exists()) {
+                const requests = snapshot.val();
+                let pendingCount = 0;
+                
+                Object.keys(requests).forEach((id) => {
+                    const data = requests[id];
+                    // Only render requests that the farmer can act on
+                    if (data.status === 'Pending') {
+                        const card = renderRequest(id, data);
+                        requestsContainer.appendChild(card);
+                        pendingCount++;
+                    }
+                });
+                
+                if (pendingCount === 0) {
+                     requestsContainer.innerHTML = "<p class='no-requests'>No new bulk requests requiring action. 🎉</p>";
+                }
+                
+            } else {
+                requestsContainer.innerHTML = "<p class='no-requests'>No bulk requests found in the database.</p>";
+            }
+            
+            // Attach event listeners after rendering
+            attachEventListeners();
+        });
+        
+        /**
+         * Attaches listeners to the Accept and Ignore buttons.
+         */
+        function attachEventListeners() {
+            requestsContainer.querySelectorAll(".accept-btn").forEach(button => {
+                button.onclick = () => handleAction(button.dataset.id, "Accepted");
+            });
+
+            requestsContainer.querySelectorAll(".ignore-btn").forEach(button => {
+                button.onclick = () => handleAction(button.dataset.id, "Ignored");
+            });
+        }
+        
+        /**
+         * Updates the status of a request in Firebase.
+         * @param {string} id - Firebase key of the request
+         * @param {string} newStatus - "Accepted" or "Ignored"
+         */
+        function handleAction(id, newStatus) {
+            const requestRef = ref(db, "bulk_requests/" + id);
+            
+            update(requestRef, { status: newStatus, farmerActionTimestamp: new Date().toISOString() })
+                .then(() => {
+                    alert(`Request ID ${id} has been marked as ${newStatus}.`);
+                    // Firebase listener will automatically remove the card since status is no longer "Pending"
+                })
+                .catch((error) => {
+                    alert(`Failed to update status: ${error.message}`);
+                    console.error("Firebase Update Error:", error);
+                });
+        }
+    </script>
+</body>
+</html>
