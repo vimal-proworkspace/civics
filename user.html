@@ -4,20 +4,14 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Citizen Report Submission</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+  <!-- No compat scripts if using modular SDK -->
 </head>
 <body>
   <h2>Submit a Civic Issue</h2>
   <form id="reportForm">
     <input type="text" id="title" placeholder="Title" required /><br />
     <textarea id="desc" placeholder="Description" required></textarea><br />
-
-    <!-- Camera capture instead of file upload -->
     <input type="file" id="photo" accept="image/*" capture="environment" required/><br />
-
-    <!-- Category dropdown -->
     <label>Category</label>
     <select id="category">
       <option value="">Select a category</option>
@@ -31,33 +25,36 @@
       <option value="Health & Sanitation">Health & Sanitation</option>
       <option value="Other / Miscellaneous">Other / Miscellaneous</option>
     </select><br />
-
-    <!-- Visible, readonly location input -->
     <label>Location (auto-detected — cannot edit)</label>
     <input type="text" id="location" readonly placeholder="Fetching location..." /><br />
-
     <button type="submit">Submit Report</button>
   </form>
 
   <h3>My Complaints</h3>
   <div id="myComplaints"></div>
 
-  <script>
+  <script type="module">
+    // Modular SDK imports
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
+
     const firebaseConfig = {
-      apiKey: "AIzaSyD3-7Y4Bo04dbKjVpaB91JcWzxR_5lAOHc",
-      authDomain: "civics-f8073.firebaseapp.com",
-      projectId: "civics-f8073",
-      storageBucket: "civics-f8073.appspot.com",
-      messagingSenderId: "5035645000",
-      appId: "1:5035645000:web:4ef79e5e5e5e5e5e"
+      apiKey: "AIzaSyDyLjGnZnHb1ZO0WUBSoj6q8clkuXP6-gY",
+        authDomain: "agrimart-01.firebaseapp.com",
+        databaseURL: "https://agrimart-01-default-rtdb.firebaseio.com/",
+        projectId: "agrimart-01",
+        storageBucket: "agrimart-01.appspot.com",
+        messagingSenderId: "101739256198",
+        appId: "1:101739256198:web:f6271b48dd399fb943b407"
     };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const storage = firebase.storage();
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
 
     let latitude = null, longitude = null;
 
-    // Mandatory geolocation
     function fetchLocation() {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -66,19 +63,18 @@
             longitude = position.coords.longitude;
             document.getElementById('location').value = `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
           },
-          (error) => {
-            alert("Location access is required to submit a report. Redirecting back to dashboard.");
+          () => {
+            alert("Location access is required. Redirecting back.");
             window.location.href = 'user.html';
           }
         );
       } else {
-        alert("Geolocation is not supported by your browser. Redirecting back.");
+        alert("Geolocation not supported. Redirecting back.");
         window.location.href = 'user.html';
       }
     }
-    fetchLocation(); // trigger on load
+    fetchLocation();
 
-    // NLP keyword mapping
     const keywordMap = {
       "Road & Pavement Issues": ["pothole","road","street","sidewalk"],
       "Street Lighting Problems": ["streetlight","lamp","light","bulb"],
@@ -95,12 +91,8 @@
       const text = desc.toLowerCase();
       let bestCategory = "Other / Miscellaneous";
       let maxScore = 0;
-
       for (const [category, keywords] of Object.entries(keywordMap)) {
-        let score = 0;
-        for (const kw of keywords) {
-          if (text.includes(kw)) score++;
-        }
+        let score = keywords.reduce((acc, kw) => acc + (text.includes(kw) ? 1 : 0), 0);
         if (score > maxScore) {
           maxScore = score;
           bestCategory = category;
@@ -116,10 +108,7 @@
 
     document.getElementById('reportForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (latitude === null || longitude === null) {
-        alert("Waiting for location. Please allow location access.");
-        return;
-      }
+      if (!latitude || !longitude) { alert("Waiting for location."); return; }
 
       const title = document.getElementById('title').value;
       const desc = document.getElementById('desc').value;
@@ -129,42 +118,30 @@
       const file = document.getElementById('photo').files[0];
       let photoURL = "";
 
-      if (selectedCategory === "") {
-        alert("Please select a category.");
-        return;
-      }
+      if (!selectedCategory) { alert("Select a category."); return; }
 
-      // Show warning if selected category differs
       if (selectedCategory !== recommendedCategory) {
-        const confirmChange = confirm(`Based on your description, this issue better fits the category: "${recommendedCategory}". Do you want to continue with your selected category "${selectedCategory}"?`);
-        if (!confirmChange) {
-          return; // allow user to change category
-        }
+        const confirmChange = confirm(`Better fits: "${recommendedCategory}". Continue with "${selectedCategory}"?`);
+        if (!confirmChange) return;
       }
 
       if (file) {
-        const ref = storage.ref('complaints/' + Date.now() + '-' + file.name);
-        await ref.put(file);
-        photoURL = await ref.getDownloadURL();
+        const storageRef = ref(storage, 'complaints/' + Date.now() + '-' + file.name);
+        await uploadBytes(storageRef, file);
+        photoURL = await getDownloadURL(storageRef);
       }
 
-      await db.collection("complaints").add({
-        title,
-        desc,
-        photoURL,
-        category: selectedCategory,
-        priority,
-        latitude,
-        longitude,
-        status: "Submitted",
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      await addDoc(collection(db, "complaints"), {
+        title, desc, photoURL, category: selectedCategory, priority,
+        latitude, longitude, status: "Submitted", createdAt: serverTimestamp()
       });
 
       alert("Report Submitted!");
       document.getElementById('reportForm').reset();
     });
 
-    db.collection("complaints").orderBy("createdAt", "desc").onSnapshot(snapshot => {
+    const q = query(collection(db, "complaints"), orderBy("createdAt", "desc"));
+    onSnapshot(q, (snapshot) => {
       const list = document.getElementById("myComplaints");
       list.innerHTML = "";
       snapshot.forEach(doc => {
