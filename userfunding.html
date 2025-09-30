@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Invest in Farming - Funding Opportunities</title>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+        header {
+            width: 100%;
+            background-color: #2e7d32;
+            color: white;
+            padding: 25px 0;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 2.8em;
+            font-weight: 700;
+        }
+        header p {
+            margin-top: 5px;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .main-container {
+            width: 90%;
+            max-width: 1200px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+            padding-bottom: 50px;
+        }
+
+        .funding-card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            border: 1px solid #e0e0e0;
+        }
+        .funding-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            background-color: #f7f7f7;
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+        }
+        .card-header h2 {
+            margin: 0;
+            font-size: 1.5em;
+            color: #2e7d32;
+            font-weight: 600;
+        }
+
+        .card-content {
+            padding: 20px;
+            flex-grow: 1;
+            font-size: 0.95em;
+            line-height: 1.6;
+            color: #555;
+        }
+        .card-content p {
+            margin-bottom: 10px;
+        }
+        .card-content strong {
+            color: #333;
+        }
+
+        .card-details {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #eee;
+            font-size: 0.9em;
+        }
+        .detail-item {
+            flex: 1 1 48%; /* Allows two items per row on larger screens, one on smaller */
+            margin-bottom: 8px;
+        }
+        .detail-item strong {
+            display: block;
+            color: #4CAF50;
+            margin-bottom: 3px;
+            font-size: 1.1em;
+        }
+
+        .card-media {
+            padding: 0 20px 20px;
+            text-align: center;
+        }
+        .card-media img {
+            max-width: 100%;
+            height: 200px; /* Fixed height for image previews */
+            object-fit: cover; /* Cover the area, cropping if necessary */
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+        }
+        .card-media .video-link {
+            display: block;
+            margin-top: 10px;
+            color: #007bff;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 8px 15px;
+            background-color: #e6f2ff;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+        }
+        .card-media .video-link:hover {
+            background-color: #cce0ff;
+        }
+
+        .no-requests {
+            text-align: center;
+            font-size: 1.2em;
+            color: #777;
+            padding: 50px;
+            grid-column: 1 / -1; /* Make it span all columns */
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Invest in Sustainable Farming</h1>
+        <p>Connect with farmers, grow together</p>
+    </header>
+
+    <div class="main-container" id="fundingRequestsContainer">
+        <p class="no-requests">Loading funding opportunities...</p>
+    </div>
+
+    <script>
+        // Firebase Config (use the same config as your farmer's submission page)
+        const firebaseConfig = {
+            apiKey: "AIzaSyDyLjGnZnHb1ZO0WUBSoj6q8clkuXP6-gY",
+            authDomain: "agrimart-01.firebaseapp.com",
+            databaseURL: "https://agrimart-01-default-rtdb.firebaseio.com/",
+            projectId: "agrimart-01",
+            storageBucket: "agrimart-01.appspot.com",
+            messagingSenderId: "101739256198",
+            appId: "1:101739256198:web:f6271b48dd399fb943b407"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const storage = firebase.storage(); // Initialize storage for fetching media
+
+        const fundingRequestsContainer = document.getElementById("fundingRequestsContainer");
+
+        /**
+         * Fetches and displays funding requests.
+         */
+        function fetchFundingRequests() {
+            const requestsRef = db.ref("fundingRequests");
+
+            // Listen for changes in the 'fundingRequests' node
+            requestsRef.on("value", async (snapshot) => {
+                fundingRequestsContainer.innerHTML = ""; // Clear existing content
+
+                if (snapshot.exists()) {
+                    const requests = snapshot.val();
+                    let hasRequests = false;
+
+                    for (const id in requests) {
+                        const data = requests[id];
+                        hasRequests = true;
+
+                        const card = document.createElement("div");
+                        card.className = "funding-card";
+
+                        let photosHtml = '';
+                        // Fetch download URLs for photos
+                        if (data.photos) {
+                            const photoUrls = [];
+                            for (const photoKey in data.photos) {
+                                photoUrls.push(data.photos[photoKey]); // data.photos stores URLs directly
+                            }
+                            // Display only the first few photos for preview
+                            photosHtml = photoUrls.slice(0, 3).map(url => `<img src="${url}" alt="Farm Photo">`).join('');
+                        }
+
+                        let videoHtml = '';
+                        if (data.video) {
+                            videoHtml = `<a href="${data.video}" target="_blank" class="video-link">Watch Video Pitch</a>`;
+                        }
+
+                        card.innerHTML = `
+                            <div class="card-header">
+                                <h2>${data.projectTitle || 'Unnamed Project'}</h2>
+                            </div>
+                            <div class="card-content">
+                                <p><strong>Impact:</strong> ${data.expectedImpact || 'No description provided.'}</p>
+                                <div class="card-details">
+                                    <div class="detail-item"><strong>Goal:</strong> ₹ ${data.investmentGoal ? parseFloat(data.investmentGoal).toLocaleString() : 'N/A'}</div>
+                                    <div class="detail-item"><strong>Return:</strong> ${data.returnRate || 'N/A'}</div>
+                                    <div class="detail-item"><strong>Payback:</strong> ${data.repaymentPeriod ? data.repaymentPeriod + ' months' : 'N/A'}</div>
+                                </div>
+                            </div>
+                            <div class="card-media">
+                                ${photosHtml.length > 0 ? photosHtml : '<p style="color:#777; font-size:0.9em;">No photos uploaded.</p>'}
+                                ${videoHtml}
+                            </div>
+                            `;
+                        fundingRequestsContainer.appendChild(card);
+                    }
+
+                    if (!hasRequests) {
+                        fundingRequestsContainer.innerHTML = '<p class="no-requests">No funding requests available at the moment. Please check back later!</p>';
+                    }
+
+                } else {
+                    fundingRequestsContainer.innerHTML = '<p class="no-requests">No funding requests available at the moment. Please check back later!</p>';
+                }
+            });
+        }
+
+        // Fetch requests when the page loads
+        document.addEventListener("DOMContentLoaded", fetchFundingRequests);
+    </script>
+</body>
+</html>

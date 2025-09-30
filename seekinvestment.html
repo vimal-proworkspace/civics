@@ -1,0 +1,206 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Simple Funding Request</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f8f8;
+      color: #333;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      color: #2e7d32;
+      margin-bottom: 25px;
+      font-size: 2em;
+      text-align: center;
+    }
+    form {
+      background-color: white;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+      width: 95%;
+      max-width: 450px;
+    }
+    .form-section {
+      border-bottom: 3px solid #e0e0e0;
+      padding-bottom: 25px;
+      margin-bottom: 30px;
+    }
+    h2 {
+      color: #4CAF50;
+      font-size: 1.6em;
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: #333;
+      font-size: 1.15em;
+    }
+    input:not([type="file"]), select, textarea {
+      width: 100%;
+      padding: 18px;
+      margin-bottom: 25px;
+      border: 1px solid #aaa;
+      border-radius: 10px;
+      box-sizing: border-box; 
+      font-size: 1.1em;
+    }
+    textarea {
+      resize: none;
+      min-height: 120px;
+    }
+    input[type="file"] {
+      padding: 20px;
+      border: 3px dashed #7bc07b;
+      background-color: #ebf5eb;
+      cursor: pointer;
+      margin-bottom: 20px;
+      border-radius: 10px;
+    }
+    button[type="submit"] {
+      background-color: #2e7d32;
+      color: white;
+      padding: 20px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1.4em;
+      width: 100%;
+      margin-top: 25px;
+      transition: background-color 0.3s;
+    }
+    button[type="submit"]:hover {
+      background-color: #1b5e20;
+    }
+    .hint {
+      font-size: 0.9em;
+      color: #777;
+      margin-top: -15px;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Need Money for Your Farm?</h1>
+
+  <form id="investmentProposalForm">
+    <section class="form-section">
+      <h2>1. What Do You Need?</h2>
+      <label for="projectTitle">What is the money for?</label>
+      <input type="text" id="projectTitle" name="projectTitle" required placeholder="e.g., A New Pump, Better Seeds, Farm Repair">
+      
+      <label for="investmentGoal">How much money (in Rupees)?</label>
+      <input type="number" id="investmentGoal" name="investmentGoal" min="1000" required placeholder="e.g., 50000">
+      
+      <label for="repaymentPeriod">How many months until you pay it back?</label>
+      <input type="number" id="repaymentPeriod" name="repaymentPeriod" min="3" max="60" required placeholder="e.g., 12 months">
+    </section>
+
+    <section class="form-section">
+      <h2>2. Why is this a good idea?</h2>
+      <label for="expectedImpact">How will this help your farm and business?</label>
+      <textarea id="expectedImpact" name="expectedImpact" required placeholder="Tell us simply!"></textarea>
+
+      <label for="returnRate">What will the investor get back?</label>
+      <input type="text" id="returnRate" name="returnRate" required placeholder="e.g., 10% profit or 15% of harvest">
+    </section>
+
+    <section class="form-section">
+      <h2>3. Show Your Farm 📸</h2>
+      <p class="hint">Tap below! Your camera opens to take fresh pictures.</p>
+
+      <label for="farmPhotos">Take 3-5 Photos of Your Farm</label>
+      <input type="file" id="farmPhotos" name="farmPhotos" accept="image/*" multiple capture="camera" required>
+      
+      <label for="videoPitch">Record a Quick Video Message (Optional)</label>
+      <input type="file" id="videoPitch" name="videoPitch" accept="video/*" capture="camera">
+    </section>
+
+    <button type="submit">SEND MY REQUEST NOW</button>
+  </form>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
+
+  <script>
+    // Firebase Config
+    const firebaseConfig = {
+      apiKey: "AIzaSyDyLjGnZnHb1ZO0WUBSoj6q8clkuXP6-gY",
+      authDomain: "agrimart-01.firebaseapp.com",
+      databaseURL: "https://agrimart-01-default-rtdb.firebaseio.com/",
+      projectId: "agrimart-01",
+      storageBucket: "agrimart-01.appspot.com",
+      messagingSenderId: "101739256198",
+      appId: "1:101739256198:web:f6271b48dd399fb943b407"
+    };
+
+    // Init Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const storage = firebase.storage();
+
+    // Handle Form
+    document.getElementById("investmentProposalForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const projectTitle = document.getElementById("projectTitle").value;
+      const investmentGoal = document.getElementById("investmentGoal").value;
+      const repaymentPeriod = document.getElementById("repaymentPeriod").value;
+      const expectedImpact = document.getElementById("expectedImpact").value;
+      const returnRate = document.getElementById("returnRate").value;
+
+      const photos = document.getElementById("farmPhotos").files;
+      const video = document.getElementById("videoPitch").files[0];
+
+      // Save text data first
+      const newRequestRef = db.ref("fundingRequests").push();
+      const requestId = newRequestRef.key;
+
+      const requestData = {
+        projectTitle,
+        investmentGoal,
+        repaymentPeriod,
+        expectedImpact,
+        returnRate,
+        createdAt: new Date().toISOString(),
+      };
+
+      await newRequestRef.set(requestData);
+
+      // Upload photos
+      for (let i = 0; i < photos.length; i++) {
+        const file = photos[i];
+        const storageRef = storage.ref(`requests/${requestId}/photos/${file.name}`);
+        await storageRef.put(file);
+        const url = await storageRef.getDownloadURL();
+        db.ref(`fundingRequests/${requestId}/photos`).push(url);
+      }
+
+      // Upload video if exists
+      if (video) {
+        const videoRef = storage.ref(`requests/${requestId}/video/${video.name}`);
+        await videoRef.put(video);
+        const videoURL = await videoRef.getDownloadURL();
+        db.ref(`fundingRequests/${requestId}/video`).set(videoURL);
+      }
+
+      alert("✅ Your request has been sent successfully!");
+      e.target.reset();
+    });
+  </script>
+</body>
+</html>
+```
