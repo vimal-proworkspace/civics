@@ -5,29 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pulse Point | Sign Up</title>
   <link rel="stylesheet" href="auth.css">
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="background-animation"></div>
-
   <div class="main-card">
     <div class="form-section">
-      <div class="logo">
-        <svg width="24" height="24" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-          <rect x="10" y="10" width="30" height="30" rx="5" fill="#2c7a7b"/>
-          <rect x="40" y="10" width="20" height="20" rx="3" fill="#38b2ac"/>
-          <rect x="70" y="10" width="20" height="20" rx="3" fill="#4fd1c5"/>
-          <rect x="10" y="50" width="20" height="20" rx="3" fill="#2c7a7b"/>
-          <rect x="40" y="40" width="30" height="30" rx="5" fill="#38b2ac"/>
-          <path d="M75 35L85 45L75 55" stroke="#4fd1c5" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M35 70L45 80L35 90" stroke="#4fd1c5" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <span>Pulse Point</span>
-      </div>
-
       <h3>Create Account</h3>
-      <p class="subtitle">Join the civic reporting platform today.</p>
-
       <form id="signupForm">
         <div class="input-group">
           <label for="user-role-signup">I am a:</label>
@@ -36,17 +18,15 @@
             <option value="official">Municipal Official</option>
           </select>
         </div>
-
         <div class="input-group">
-          <input type="text" placeholder="Full Name" required>
+          <input type="text" id="fullName" placeholder="Full Name" required>
         </div>
         <div class="input-group">
-          <input type="email" placeholder="Email Address" required>
+          <input type="email" id="email" placeholder="Email Address" required>
         </div>
         <div class="input-group">
-          <input type="password" placeholder="Password" required>
+          <input type="password" id="password" placeholder="Password" required>
         </div>
-
         <div id="citizen-verification-fields">
           <div class="input-group">
             <input type="text" id="aadhar-number" placeholder="Aadhar Number" required>
@@ -55,32 +35,11 @@
             <input type="text" id="pan-number" placeholder="PAN Number" required>
           </div>
         </div>
-
         <button type="submit" id="main-signup-btn">Create account</button>
       </form>
-
-      <div class="divider"><span>OR</span></div>
-      <button class="social-btn google-btn">Continue with Google</button>
-
-      <div class="links">
-        <p>Already have an account? <a href="login.html">Sign In</a></p>
-      </div>
-    </div>
-
-    <div class="illustration-section">
-      <div class="illustration-content">
-        <div class="lightbulb"></div>
-        <div class="person-outline">
-          <div class="head"></div>
-          <div class="body"></div>
-          <div class="laptop"></div>
-          <div class="wave"></div>
-        </div>
-      </div>
+      <p>Already have an account? <a href="login.html">Sign In</a></p>
     </div>
   </div>
-
-  <div class="custom-alert" id="customAlert"></div>
 
   <script>
     const roleSelect = document.getElementById('user-role-signup');
@@ -89,9 +48,9 @@
     const aadharInput = document.getElementById('aadhar-number');
     const panInput = document.getElementById('pan-number');
 
-    // toggle for role
+    // Role toggle
     roleSelect.addEventListener('change', function() {
-      if (this.value === 'official') {
+      if(this.value === 'official') {
         signupButton.textContent = 'Request Official Account';
         verificationFields.style.display = 'none';
         aadharInput.removeAttribute('required');
@@ -99,21 +58,34 @@
       } else {
         signupButton.textContent = 'Create account';
         verificationFields.style.display = 'block';
-        aadharInput.setAttribute('required', 'required');
-        panInput.setAttribute('required', 'required');
+        aadharInput.setAttribute('required','required');
+        panInput.setAttribute('required','required');
       }
     });
 
-    // redirect on submit
     document.getElementById('signupForm').addEventListener('submit', function(e) {
       e.preventDefault();
-      const role = roleSelect.value;
-      alert("Account created! Redirecting...");
-      if (role === 'citizen') {
-        window.location.href = 'udash.html';
-      } else {
-        window.location.href = 'municipal.html';
+      const users = JSON.parse(localStorage.getItem('users') || '[]');
+
+      const newUser = {
+        fullName: document.getElementById('fullName').value,
+        email: document.getElementById('email').value,
+        password: document.getElementById('password').value,
+        role: roleSelect.value,
+        aadhar: aadharInput.value || '',
+        pan: panInput.value || ''
+      };
+
+      if(users.some(u => u.email === newUser.email && u.role === newUser.role)) {
+        alert('User already exists!');
+        return;
       }
+
+      users.push(newUser);
+      localStorage.setItem('users', JSON.stringify(users));
+      alert('Account created!');
+      if(newUser.role === 'citizen') window.location.href = 'udash.html';
+      else window.location.href = 'municipal.html';
     });
   </script>
 </body>

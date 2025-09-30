@@ -4,46 +4,29 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>User Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     .header { display: flex; justify-content: space-between; align-items: center; }
-
     .bell { position: relative; cursor: pointer; font-size: 24px; }
     .bell::after {
       content: attr(data-count);
       position: absolute;
-      top: -8px;
-      right: -8px;
-      background: red;
-      color: white;
+      top: -8px; right: -8px;
+      background: red; color: white;
       font-size: 12px;
-      width: 18px;
-      height: 18px;
+      width: 18px; height: 18px;
       border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: flex; align-items: center; justify-content: center;
     }
-
     #notificationPanel {
       display: none;
-      position: absolute;
-      top: 35px;
-      right: 0;
-      border: 1px solid #ccc;
-      background: white;
-      width: 300px;
-      max-height: 300px;
-      overflow-y: auto;
-      padding: 10px;
-      border-radius: 5px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      position: absolute; top: 35px; right: 0;
+      border: 1px solid #ccc; background: white;
+      width: 300px; max-height: 300px; overflow-y: auto;
+      padding: 10px; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);
       z-index: 100;
     }
-
     .counts { display: flex; margin-top: 20px; gap: 15px; }
     .count-card { flex: 1; padding: 15px; border: 1px solid #ccc; border-radius: 5px; text-align: center; }
     #graphContainer { margin-top: 30px; max-width: 500px; }
@@ -72,21 +55,12 @@
     <canvas id="complaintChart"></canvas>
   </div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyD3-7Y4Bo04dbKjVpaB91JcWzxR_5lAOHc",
-      authDomain: "civics-f8073.firebaseapp.com",
-      projectId: "civics-f8073",
-      storageBucket: "civics-f8073.appspot.com",
-      messagingSenderId: "5035645000",
-      appId: "1:5035645000:web:4ef79e5e5e5e5e5e"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+  <h3>My Complaints</h3>
+  <div id="myComplaints"></div>
 
-    function goToReport() {
-      window.location.href = "user.html"; 
-    }
+  <script>
+    const loggedInUser = JSON.parse(localStorage.getItem('loggedInUser'));
+    const notifications = [];
 
     const resolvedEl = document.getElementById("resolvedCount");
     const inProgressEl = document.getElementById("inProgressCount");
@@ -94,33 +68,29 @@
     const bell = document.getElementById("notificationBell");
     const panel = document.getElementById("notificationPanel");
 
-    let resolved=0, inProgress=0, pending=0;
-    let notifications = [];
+    function goToReport() {
+      window.location.href = "user.html";
+    }
 
-    // toggle notification panel
-    bell.addEventListener('click', () => {
-      panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
-    });
+    function getComplaints() {
+      return JSON.parse(localStorage.getItem('complaints') || '[]');
+    }
 
-    db.collection("complaints").orderBy("createdAt", "desc").onSnapshot(snapshot => {
-      resolved=0; inProgress=0; pending=0;
-      notifications = [];
+    function renderDashboard() {
+      const complaints = getComplaints().filter(c => c.email === loggedInUser.email);
+      let resolved = 0, inProgress = 0, pending = 0;
 
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        if(data.status === "Resolved") {
-          resolved++;
-          notifications.push(`Your complaint "${data.title}" has been resolved.`);
-        } else if(data.status === "In Progress") inProgress++;
-        else if(data.status === "Pending Review") pending++;
+      panel.innerHTML = '';
+      complaints.forEach(c => {
+        if(c.status === "Resolved") resolved++;
+        else if(c.status === "In Progress") inProgress++;
+        else pending++;
 
-        // SLA: 3 days threshold for unresolved complaints
-        if(data.status !== "Resolved" && data.createdAt) {
-          const createdTime = data.createdAt.toDate();
+        if(c.status !== "Resolved" && c.createdAt) {
+          const created = new Date(c.createdAt);
           const now = new Date();
-          const diffHours = (now - createdTime) / (1000*60*60);
-          if(diffHours > 72) {
-            notifications.push(`Your complaint "${data.title}" is pending for over 3 days.`);
+          if((now - created) / (1000*60*60) > 72) {
+            notifications.push(`Your complaint "${c.title}" is pending for over 3 days.`);
           }
         }
       });
@@ -129,42 +99,55 @@
       inProgressEl.textContent = inProgress;
       pendingEl.textContent = pending;
 
-      bell.setAttribute("data-count", notifications.length);
+      bell.setAttribute('data-count', notifications.length);
 
       renderChart(resolved, inProgress, pending);
       renderNotifications();
-    });
+      renderComplaintsList(complaints);
+    }
 
     function renderChart(resolved, inProgress, pending) {
       const ctx = document.getElementById('complaintChart').getContext('2d');
       if(window.myChart) window.myChart.destroy();
-
       window.myChart = new Chart(ctx, {
         type: 'doughnut',
-        data: {
-          labels: ['Resolved', 'In Progress', 'Pending Review'],
-          datasets: [{
-            data: [resolved, inProgress, pending],
-            backgroundColor: ['#4caf50','#ff9800','#f44336']
-          }]
-        },
-        options: { responsive: true }
+        data: { labels: ['Resolved', 'In Progress', 'Pending Review'], datasets:[{data:[resolved,inProgress,pending], backgroundColor:['#4caf50','#ff9800','#f44336']}] },
+        options: { responsive:true }
       });
     }
 
     function renderNotifications() {
-      panel.innerHTML = "";
-      if(notifications.length === 0) {
-        panel.innerHTML = "<p>No new notifications.</p>";
-      } else {
-        notifications.forEach(msg => {
-          const div = document.createElement("div");
-          div.className = "notif-item";
-          div.textContent = msg;
-          panel.appendChild(div);
-        });
-      }
+      panel.innerHTML = '';
+      if(notifications.length === 0) panel.innerHTML = '<p>No new notifications.</p>';
+      else notifications.forEach(msg => {
+        const div = document.createElement('div'); div.className='notif-item'; div.textContent=msg; panel.appendChild(div);
+      });
     }
+
+    bell.addEventListener('click', () => {
+      panel.style.display = panel.style.display==='block' ? 'none' : 'block';
+    });
+
+    function renderComplaintsList(list) {
+      const container = document.getElementById("myComplaints");
+      container.innerHTML = '';
+      list.forEach(c => {
+        const div = document.createElement('div');
+        div.innerHTML = `
+          <p><strong>${c.title}</strong></p>
+          <p>${c.desc}</p>
+          ${c.photo ? `<img src="${c.photo}" width="150"/>` : ""}
+          <p>Category: ${c.category}</p>
+          <p>Priority: ${c.priority}</p>
+          <p>Location: ${c.latitude}, ${c.longitude}</p>
+          <p>Status: ${c.status}</p>
+          <hr/>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    renderDashboard();
   </script>
 </body>
 </html>

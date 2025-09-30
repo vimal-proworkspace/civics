@@ -1,247 +1,259 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Official Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-  <style>
-    .complaint-card {
-      border: 1px solid #ccc;
-      padding: 10px;
-      margin-bottom: 10px;
-      border-radius: 5px;
-      cursor: pointer;
-      transition: background 0.2s, border 0.2s;
-    }
-    .complaint-card:hover { background: #f9f9f9; }
-    .complaint-details {
-      margin-top: 10px;
-      padding: 10px;
-      background: #f4f4f4;
-      border-radius: 5px;
-    }
-    .sla-breach {
-      border: 2px solid red;
-      background-color: #ffe6e6;
-    }
-    .filter-bar { margin-bottom: 15px; }
-    .filter-bar select { margin-right: 10px; }
-
-    /* Notification bell */
-    .notification-bell {
-      position: fixed;
-      top: 15px;
-      right: 20px;
-      cursor: pointer;
-      font-size: 24px;
-    }
-    .notification-badge {
-      position: absolute;
-      top: -5px;
-      right: -10px;
-      background: red;
-      color: white;
-      border-radius: 50%;
-      padding: 2px 6px;
-      font-size: 12px;
-    }
-    .notification-dropdown {
-      display: none;
-      position: fixed;
-      top: 50px;
-      right: 20px;
-      background: white;
-      border: 1px solid #ccc;
-      width: 300px;
-      max-height: 400px;
-      overflow-y: auto;
-      z-index: 100;
-      border-radius: 5px;
-      box-shadow: 0px 2px 8px rgba(0,0,0,0.2);
-    }
-    .notification-item {
-      padding: 8px;
-      border-bottom: 1px solid #eee;
-    }
-    .notification-item:last-child { border-bottom: none; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Municipal Official Dashboard</title>
+<style>
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f2f5;
+    margin: 0;
+    padding: 20px;
+  }
+  h2 {
+    text-align: center;
+    color: #1976d2;
+    margin-bottom: 30px;
+  }
+  .filter-bar {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .filter-bar select {
+    padding: 8px 10px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    min-width: 150px;
+    font-size: 14px;
+  }
+  #complaintsList {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+  .complaint-card {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: 0.2s;
+    border-left: 5px solid #1976d2;
+  }
+  .complaint-card:hover {
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+  }
+  .complaint-details {
+    margin-top: 10px;
+    padding: 10px;
+    background: #f4f6f8;
+    border-radius: 8px;
+  }
+  .status-badge {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    color: white;
+    display: inline-block;
+  }
+  .status-pending { background: #ff9800; }
+  .status-inprogress { background: #1976d2; }
+  .status-resolved { background: #4caf50; }
+  .priority-high { color: red; font-weight: bold; }
+  .priority-normal { color: #555; }
+  .sla-breach {
+    border-left: 5px solid red !important;
+  }
+  button.status-btn {
+    margin-right: 5px;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: 0.2s;
+  }
+  button.inprogress { background: #1976d2; color: white; }
+  button.resolved { background: #4caf50; color: white; }
+  button.pending { background: #ff9800; color: white; }
+  button.status-btn:hover { opacity: 0.85; }
+  .notification-bell {
+    position: fixed;
+    top: 15px;
+    right: 20px;
+    cursor: pointer;
+    font-size: 28px;
+  }
+  .notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -10px;
+    background: red;
+    color: white;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 12px;
+  }
+  .notification-dropdown {
+    display: none;
+    position: fixed;
+    top: 50px;
+    right: 20px;
+    background: white;
+    border: 1px solid #ccc;
+    width: 320px;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 100;
+    border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+  }
+  .notification-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+  }
+  .notification-item:last-child { border-bottom: none; }
+  img.complaint-photo { max-width: 200px; border-radius: 8px; margin-top: 8px; }
+</style>
 </head>
 <body>
-  <h2>Municipal Official Dashboard</h2>
+<h2>Municipal Official Dashboard</h2>
 
-  <!-- Notification Bell -->
-  <div class="notification-bell" id="notificationBell">
-    🔔<span class="notification-badge" id="notificationCount">0</span>
-  </div>
-  <div class="notification-dropdown" id="notificationDropdown"></div>
+<div class="notification-bell" id="notificationBell">
+  🔔<span class="notification-badge" id="notificationCount">0</span>
+</div>
+<div class="notification-dropdown" id="notificationDropdown"></div>
 
-  <div class="filter-bar">
-    <label>Category:</label>
-    <select id="filterCategory">
-      <option value="">All</option>
-      <option value="Road & Pavement Issues">Road & Pavement Issues</option>
-      <option value="Street Lighting Problems">Street Lighting Problems</option>
-      <option value="Waste & Garbage Management">Waste & Garbage Management</option>
-      <option value="Water Supply & Sewage">Water Supply & Sewage</option>
-      <option value="Traffic Signals & Signage">Traffic Signals & Signage</option>
-      <option value="Public Safety & Security">Public Safety & Security</option>
-      <option value="Parks & Public Spaces">Parks & Public Spaces</option>
-      <option value="Health & Sanitation">Health & Sanitation</option>
-      <option value="Other / Miscellaneous">Other / Miscellaneous</option>
-    </select>
+<div class="filter-bar">
+  <select id="filterCategory">
+    <option value="">All Categories</option>
+    <option value="Road & Pavement Issues">Road & Pavement Issues</option>
+    <option value="Street Lighting Problems">Street Lighting Problems</option>
+    <option value="Waste & Garbage Management">Waste & Garbage Management</option>
+    <option value="Water Supply & Sewage">Water Supply & Sewage</option>
+    <option value="Traffic Signals & Signage">Traffic Signals & Signage</option>
+    <option value="Public Safety & Security">Public Safety & Security</option>
+    <option value="Parks & Public Spaces">Parks & Public Spaces</option>
+    <option value="Health & Sanitation">Health & Sanitation</option>
+    <option value="Other / Miscellaneous">Other / Miscellaneous</option>
+  </select>
 
-    <label>Priority:</label>
-    <select id="filterPriority">
-      <option value="">All</option>
-      <option value="High">High</option>
-      <option value="Normal">Normal</option>
-    </select>
+  <select id="filterPriority">
+    <option value="">All Priorities</option>
+    <option value="High">High</option>
+    <option value="Normal">Normal</option>
+  </select>
 
-    <label>Status:</label>
-    <select id="filterStatus">
-      <option value="">All</option>
-      <option value="Pending Review">Pending Review</option>
-      <option value="In Progress">In Progress</option>
-      <option value="Resolved">Resolved</option>
-    </select>
-  </div>
+  <select id="filterStatus">
+    <option value="">All Statuses</option>
+    <option value="Pending Review">Pending Review</option>
+    <option value="In Progress">In Progress</option>
+    <option value="Resolved">Resolved</option>
+  </select>
+</div>
 
-  <div id="complaintsList"></div>
+<div id="complaintsList"></div>
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyD3-7Y4Bo04dbKjVpaB91JcWzxR_5lAOHc",
-      authDomain: "civics-f8073.firebaseapp.com",
-      projectId: "civics-f8073",
-      storageBucket: "civics-f8073.appspot.com",
-      messagingSenderId: "5035645000",
-      appId: "1:5035645000:web:4ef79e5e5e5e5e5e"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
+<script>
+const notifications=[];
+const filterCategory = document.getElementById('filterCategory');
+const filterPriority = document.getElementById('filterPriority');
+const filterStatus = document.getElementById('filterStatus');
+const complaintsContainer = document.getElementById('complaintsList');
 
-    let allComplaints = [];
-    let notifications = [];
-    const knownComplaintIds = new Set();
+function getComplaints(){ return JSON.parse(localStorage.getItem('complaints')||'[]'); }
 
-    const filterCategory = document.getElementById("filterCategory");
-    const filterPriority = document.getElementById("filterPriority");
-    const filterStatus = document.getElementById("filterStatus");
+function renderComplaints(){
+  let list = getComplaints();
+  if(filterCategory.value) list = list.filter(c => c.category === filterCategory.value);
+  if(filterPriority.value) list = list.filter(c => c.priority === filterPriority.value);
+  if(filterStatus.value) list = list.filter(c => c.status === filterStatus.value);
 
-    const notificationBell = document.getElementById("notificationBell");
-    const notificationCount = document.getElementById("notificationCount");
-    const notificationDropdown = document.getElementById("notificationDropdown");
+  complaintsContainer.innerHTML = '';
+  notifications.length = 0;
 
-    function renderNotifications() {
-      notificationCount.innerText = notifications.length;
-      notificationDropdown.innerHTML = notifications.map(n => `<div class="notification-item">${n}</div>`).join('');
-    }
+  list.forEach(c=>{
+    const div = document.createElement('div');
+    const created = new Date(c.createdAt);
+    const now = new Date();
+    const slaBreach = ((now - created)/(1000*60*60)) > 72;
 
-    notificationBell.addEventListener("click", () => {
-      notificationDropdown.style.display = notificationDropdown.style.display === "block" ? "none" : "block";
+    div.className = 'complaint-card' + (slaBreach ? ' sla-breach' : '');
+    
+    // Status badge
+    let statusClass = '';
+    if(c.status === 'Pending Review') statusClass='status-pending';
+    else if(c.status === 'In Progress') statusClass='status-inprogress';
+    else if(c.status === 'Resolved') statusClass='status-resolved';
+
+    div.innerHTML = `
+      <div><strong>${c.title}</strong> 
+      <span class="status-badge ${statusClass}">${c.status}</span></div>
+      <p>${c.desc}</p>
+      <p>Category: ${c.category}, Priority: <span class="priority-${c.priority==='High'?'high':'normal'}">${c.priority}</span></p>
+      <p>Location: ${c.latitude.toFixed(4)}, ${c.longitude.toFixed(4)}</p>
+      <div>
+        <button class="status-btn pending" onclick="updateStatus(${c.id},'Pending Review',event)">Pending Review</button>
+        <button class="status-btn inprogress" onclick="updateStatus(${c.id},'In Progress',event)">In Progress</button>
+        <button class="status-btn resolved" onclick="updateStatus(${c.id},'Resolved',event)">Resolved</button>
+      </div>
+      <div class="complaint-details" style="display:none;" id="details-${c.id}">
+        ${c.photo?`<img class="complaint-photo" src="${c.photo}"/>`:''}
+      </div>
+    `;
+
+    div.addEventListener('click',()=>{ 
+      const d = document.getElementById('details-'+c.id);
+      d.style.display = d.style.display==='none'?'block':'none';
     });
 
-    function renderComplaints() {
-      const list = document.getElementById("complaintsList");
-      list.innerHTML = "";
+    complaintsContainer.appendChild(div);
 
-      const filtered = allComplaints.filter(d => {
-        return (filterCategory.value === "" || d.category === filterCategory.value) &&
-               (filterPriority.value === "" || d.priority === filterPriority.value) &&
-               (filterStatus.value === "" || d.status === filterStatus.value);
-      });
+    if(slaBreach) notifications.push(`SLA breach for complaint "${c.title}"`);
+  });
 
-      filtered.forEach(doc => {
-        const div = document.createElement("div");
-        div.className = "complaint-card";
+  document.getElementById('notificationCount').textContent = notifications.length;
+  renderNotifications();
+}
 
-        // SLA Breach check
-        let isSlaBreach = false;
-        if (doc.priority === "High" && doc.status !== "Resolved" && doc.createdAt) {
-          const createdTime = doc.createdAt.toDate();
-          const now = new Date();
-          const diffHours = (now - createdTime) / (1000*60*60);
-          if (diffHours > 24) {
-            isSlaBreach = true;
-          }
-        }
-        if (isSlaBreach) div.classList.add("sla-breach");
+function updateStatus(id, status, event){
+  event.stopPropagation(); // Prevent card toggle
+  const complaints = getComplaints();
+  const cIndex = complaints.findIndex(c => c.id === id);
+  if(cIndex>-1){
+    complaints[cIndex].status = status;
+    localStorage.setItem('complaints', JSON.stringify(complaints));
+    renderComplaints();
+  }
+}
 
-        div.innerHTML = `
-          <p><strong>${doc.title}</strong> (${doc.status || "Pending Review"})</p>
-          <p>${doc.desc.substring(0,50)}...</p>
-          <div class="complaint-details" style="display:none;">
-            ${doc.category ? `<p>Category: ${doc.category}</p>` : ""}
-            ${doc.photoURL ? `<img src="${doc.photoURL}" width="150"/>` : ""}
-            ${doc.priority ? `<p>Priority: ${doc.priority}</p>` : ""}
-            ${doc.latitude && doc.longitude ? `<p>Location: ${doc.latitude.toFixed(4)}, ${doc.longitude.toFixed(4)}</p>` : ""}
-            ${doc.createdAt ? `<p>Created At: ${doc.createdAt.toDate()}</p>` : ""}
-            <label>Update Status:</label>
-            <select class="status-select" onchange="updateStatus('${doc.id}', this.value)">
-              <option value="Pending Review" ${doc.status === "Pending Review" ? "selected" : ""}>Pending Review</option>
-              <option value="In Progress" ${doc.status === "In Progress" ? "selected" : ""}>In Progress</option>
-              <option value="Resolved" ${doc.status === "Resolved" ? "selected" : ""}>Resolved</option>
-            </select>
-          </div>
-        `;
+filterCategory.addEventListener('change', renderComplaints);
+filterPriority.addEventListener('change', renderComplaints);
+filterStatus.addEventListener('change', renderComplaints);
 
-        // Toggle details on card click
-        div.addEventListener("click", () => {
-          const details = div.querySelector(".complaint-details");
-          details.style.display = details.style.display === "none" ? "block" : "none";
-        });
+const bell = document.getElementById('notificationBell');
+const dropdown = document.getElementById('notificationDropdown');
+bell.addEventListener('click', ()=>{ dropdown.style.display = dropdown.style.display==='block'?'none':'block'; });
 
-        // Prevent dropdown click from toggling the card
-        div.querySelectorAll("select").forEach(el => {
-          el.addEventListener("click", e => e.stopPropagation());
-        });
+function renderNotifications(){
+  dropdown.innerHTML = '';
+  if(notifications.length===0){ dropdown.innerHTML = '<p style="padding:10px;">No notifications</p>'; return; }
+  notifications.forEach(msg=>{
+    const d = document.createElement('div');
+    d.className='notification-item';
+    d.textContent = msg;
+    dropdown.appendChild(d);
+  });
+}
 
-        list.appendChild(div);
-      });
-    }
-
-    db.collection("complaints").orderBy("createdAt", "desc").onSnapshot(snapshot => {
-      allComplaints = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-      // Notifications instead of alerts
-      allComplaints.forEach(doc => {
-        if (!knownComplaintIds.has(doc.id)) {
-          knownComplaintIds.add(doc.id);
-          notifications.push(`New complaint: ${doc.title} (${doc.category || "No Category"})`);
-        }
-
-        // SLA alert: High priority pending more than 24 hours
-        if (doc.priority === "High" && doc.status !== "Resolved" && doc.createdAt) {
-          const createdTime = doc.createdAt.toDate();
-          const now = new Date();
-          const diffHours = (now - createdTime) / (1000*60*60);
-          if (diffHours > 24) {
-            notifications.push(`SLA Breach! Complaint "${doc.title}" pending >24 hrs`);
-          }
-        }
-      });
-
-      renderNotifications();
-      renderComplaints();
-    });
-
-    filterCategory.addEventListener("change", renderComplaints);
-    filterPriority.addEventListener("change", renderComplaints);
-    filterStatus.addEventListener("change", renderComplaints);
-
-    async function updateStatus(id, newStatus) {
-      try {
-        await db.collection("complaints").doc(id).update({ status: newStatus });
-        notifications.push(`Status updated: Complaint ID ${id} → ${newStatus}`);
-        renderNotifications();
-      } catch (error) {
-        console.error("Error updating status: ", error);
-        notifications.push(`Failed to update status for Complaint ID ${id}`);
-        renderNotifications();
-      }
-    }
-  </script>
+renderComplaints();
+</script>
 </body>
 </html>
